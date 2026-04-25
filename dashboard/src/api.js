@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const api = axios.create({ baseURL: "http://127.0.0.1:8000" });
+const api = axios.create({ baseURL: "https://balans-production.up.railway.app" });
 
 export const getKPI          = ()       => api.get("/summary/kpi").then(r => r.data);
 export const getMonthly      = ()       => api.get("/summary/month").then(r => r.data);
