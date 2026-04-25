@@ -29,6 +29,7 @@ export default function Transactions() {
     setTxns(data);
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { load(); }, [typeF, catF]);
 
   const allCats = [...CATEGORIES.income, ...CATEGORIES.expense];

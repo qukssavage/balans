@@ -9,7 +9,6 @@ const fmt = (n) => {
   if (Math.abs(n) >= 1e3) return `${Math.round(n/1e3)}K`;
   return String(n);
 };
-const fmtFull = (n) => new Intl.NumberFormat("ru-RU").format(Math.round(n)) + " UZS";
 const fmtDate = (d) => new Date(d).toLocaleDateString("ru-RU", { day: "numeric", month: "short" });
 const pct = (a, b) => b === 0 ? null : Math.round((a - b) / b * 100);
 
