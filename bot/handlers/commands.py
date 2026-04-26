@@ -9,7 +9,7 @@ def get_keyboard(lang: str) -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         [
             [t(lang, "btn_month"), t(lang, "btn_week")],
-            [t(lang, "btn_undo")],
+            [t(lang, "btn_budget")], [t(lang, "btn_undo")],
         ],
         resize_keyboard=True,
     )
@@ -112,7 +112,13 @@ async def cmd_budget(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for b in budgets:
         spent = data["expense"].get(b["category"], {}).get("total", 0)
         pct   = spent / b["monthly_limit"] * 100 if b["monthly_limit"] > 0 else 0
-        bar   = "🟩" * int(pct // 20) + "⬜" * (5 - int(pct // 20))
+        filled = min(int(pct // 10), 10)
+        if pct >= 100:
+            bar = "🟥" * 10
+        elif pct >=80:
+            bar = "🟧" * filled + "⬜️" * (10 - filled)
+        else:
+            bar = "🟩" * filled + "⬜️" * (10 - filled)
         status = "❌" if pct >= 100 else "⚠️" if pct >= 80 else "✅"
         lines.append(
             f"{status} *{b['category']}*\n"
@@ -121,3 +127,23 @@ async def cmd_budget(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
     await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
+
+async def cmd_reset(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    lang = await get_user_lang(user.id) or "ru"
+    
+    from database import delete_all_budgets, delete_all_transactions
+    
+    keyboard = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("🗑 Все транзакции", callback_data="reset:transactions"),
+            InlineKeyboardButton("🎯 Все бюджеты",   callback_data="reset:budgets"),
+        ],
+        [InlineKeyboardButton("❌ Отмена", callback_data="reset:cancel")],
+    ])
+    
+    await update.message.reply_text(
+        "⚠️ *Что хотите сбросить?*\n\n_Это действие нельзя отменить._",
+        parse_mode="Markdown",
+        reply_markup=keyboard,
+    )

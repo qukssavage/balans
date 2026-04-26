@@ -58,6 +58,7 @@ TEXTS = {
         "btn_undo":         "↩️ Отменить последнее",
         "btn_income":       "💰 Доход",
         "btn_expense":      "💸 Расход",
+        "btn_budget":       "🎯 Бюджеты",
         "pieces":           "шт.",
     },
     "uz": {
@@ -119,6 +120,7 @@ TEXTS = {
         "btn_undo":         "↩️ Oxirgini bekor qilish",
         "btn_income":       "💰 Daromad",
         "btn_expense":      "💸 Xarajat",
+        "btn_budget":       "🎯 Byudjetlar",
         "pieces":           "ta",
     },
 }

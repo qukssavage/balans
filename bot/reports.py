@@ -21,22 +21,8 @@ def fmt_date(date_str: str, lang: str = "ru") -> str:
 
 def fmt_money(amount: float, lang: str = "ru") -> str:
     amount = round(amount)
-    if lang == "uz":
-        if abs(amount) >= 1_000_000_000:
-            return f"{amount/1_000_000_000:.1f} mlrd so'm"
-        if abs(amount) >= 1_000_000:
-            return f"{amount/1_000_000:.1f} mln so'm"
-        if abs(amount) >= 1_000:
-            return f"{amount/1_000:.0f} ming so'm"
-        return f"{amount:,} so'm"
-    else:
-        if abs(amount) >= 1_000_000_000:
-            return f"{amount/1_000_000_000:.1f} млрд сум"
-        if abs(amount) >= 1_000_000:
-            return f"{amount/1_000_000:.1f} млн сум"
-        if abs(amount) >= 1_000:
-            return f"{amount/1_000:.0f} тыс сум"
-        return f"{amount:,} сум"
+    suffix = "so'm" if lang == "uz" else "сум"
+    return f"{amount:,} {suffix}".replace(",", " ")
 
 
 def confirm_transaction(txn: dict, lang: str = "ru") -> str:

@@ -110,6 +110,16 @@ async def delete_last_transaction(user_id):
 
     return txn
 
+async def delete_transactions_by_category(category: str):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("DELETE FROM transactions WHERE category=?", (category,))
+        await db.commit()
+
+async def delete_all_transactions():
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("DELETE FROM transactions")
+        await db.commit()
+
 
 async def get_summary(period="month"):
     if period == "today":
@@ -199,3 +209,13 @@ async def check_budget_alerts(category: str, lang: str = "ru") -> str | None:
         return f"⚠️ Внимание! *{category}* использована на {pct:.0f}%\nПотрачено: {spent/1e6:.1f}M из {limit/1e6:.1f}M сум"
 
     return None
+
+async def delete_budget(category: str):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("DELETE FROM budgets WHERE category=?", (category,))
+        await db.commit()
+
+async def delete_all_budgets():
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("DELETE FROM budgets")
+        await db.commit()

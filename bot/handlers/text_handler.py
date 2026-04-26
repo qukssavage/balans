@@ -3,7 +3,7 @@ from telegram.ext import ContextTypes
 from parser import parse
 from database import save_transaction, get_summary, delete_last_transaction, get_user_lang, set_user_lang
 from reports import confirm_transaction, format_summary, format_undo, format_unclear
-from handlers.commands import get_keyboard, lang_keyboard
+from handlers.commands import get_keyboard, lang_keyboard, cmd_budget
 from config import CATEGORIES
 from lang import t
 
@@ -43,6 +43,8 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if deleted:
             return await update.message.reply_text(format_undo(deleted, lang), parse_mode="Markdown")
         return await update.message.reply_text(t(lang, "nothing_to_undo"))
+    if text in ("🎯 Бюджеты", "🎯 Byudjetlar"):
+        return await cmd_budget(update, context)
 
     result = parse(text)
     intent = result["intent"]
@@ -148,6 +150,22 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         txn = {**pending, "id": txn_id, "username": user.username or user.first_name}
         await query.edit_message_text(confirm_transaction(txn, lang), parse_mode="Markdown")
+
+    # Сброс данных
+    if data.startswith("reset:"):
+        action = data.split(":")[1]
+        if action == "cancel":
+            await query.edit_message_text("Отменено.")
+            return
+        if action == "transactions":
+            from database import delete_all_transactions
+            await delete_all_transactions()
+            await query.edit_message_text("✅ Все транзакции удалены.")
+        elif action == "budgets":
+            from database import delete_all_budgets
+            await delete_all_budgets()
+            await query.edit_message_text("✅ Все бюджеты сброшены.")
+        return
 
 
 async def _save_and_confirm(update, context, result, lang):

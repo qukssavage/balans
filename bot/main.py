@@ -7,7 +7,7 @@ from telegram.ext import (
 )
 from config import TELEGRAM_BOT_TOKEN
 from database import init_db
-from handlers.commands import cmd_start, cmd_report, cmd_undo, cmd_help, cmd_language, cmd_budget
+from handlers.commands import cmd_start, cmd_report, cmd_undo, cmd_help, cmd_language, cmd_budget, cmd_reset
 from handlers.text_handler import handle_text, handle_callback
 from scheduler import send_daily_report
 import datetime
@@ -49,6 +49,7 @@ def main():
     app.add_handler(CommandHandler("help",     cmd_help))
     app.add_handler(CommandHandler("language", cmd_language))
     app.add_handler(CommandHandler("budget",   cmd_budget))
+    app.add_handler(CommandHandler("reset",    cmd_reset))
     app.add_handler(CallbackQueryHandler(handle_callback))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
     app.add_error_handler(error_handler)
@@ -58,7 +59,6 @@ def main():
         drop_pending_updates=True,
         allowed_updates=Update.ALL_TYPES,
     )
-
 
 if __name__ == "__main__":
     main()
