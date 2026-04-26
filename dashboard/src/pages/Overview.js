@@ -37,16 +37,47 @@ function KPICard({ label, value, prev, invert }) {
   );
 }
 
+function Onboarding({ onAdd }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "70vh", textAlign: "center", padding: 40 }}>
+      <div style={{ fontSize: 56, marginBottom: 20 }}>📊</div>
+      <h2 style={{ fontSize: 26, fontWeight: 800, margin: "0 0 12px", letterSpacing: "-0.5px", color: C.text }}>Добро пожаловать в Balans</h2>
+      <p style={{ color: C.muted, fontSize: 15, maxWidth: 420, lineHeight: 1.7, margin: "0 0 32px" }}>
+        Здесь будут отображаться доходы и расходы вашей компании. Начните с добавления первой транзакции — через форму ниже или через Telegram бота.
+      </p>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, maxWidth: 540, marginBottom: 36 }}>
+        {[
+          ["💬", "Telegram Bot", "Пишите боту @botdata365_bot голосом или текстом"],
+          ["📈", "Живой дашборд", "Все данные обновляются в реальном времени"],
+          ["📁", "Категории", "18 категорий для доходов и расходов"],
+        ].map(([icon, title, desc]) => (
+          <div key={title} style={{ background: "#fff", border: `1.5px solid ${C.border}`, borderRadius: 14, padding: 18, textAlign: "left" }}>
+            <div style={{ fontSize: 24, marginBottom: 10 }}>{icon}</div>
+            <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6, color: C.text }}>{title}</div>
+            <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.5 }}>{desc}</div>
+          </div>
+        ))}
+      </div>
+      <button onClick={onAdd}
+        style={{ background: C.gold, color: "#fff", border: "none", borderRadius: 12, padding: "12px 28px", fontFamily: "inherit", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
+        + Добавить первую транзакцию
+      </button>
+    </div>
+  );
+}
+
 export default function Overview({ onNavigate }) {
   const [kpi,     setKpi]     = useState(null);
   const [monthly, setMonthly] = useState([]);
   const [recent,  setRecent]  = useState([]);
+  const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
   const [form,    setForm]    = useState({ type:"income", amount:"", category:"", date: new Date().toISOString().split("T")[0], note:"" });
 
   const load = async () => {
     const [k, m, t] = await Promise.all([getKPI(), getMonthly(), getTransactions({ limit: 5 })]);
     setKpi(k); setMonthly(m); setRecent(t);
+    setLoading(false);
   };
 
   useEffect(() => { load(); }, []);
@@ -60,10 +91,22 @@ export default function Overview({ onNavigate }) {
   };
 
   const inp = { width: "100%", padding: "10px 14px", border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 14, fontFamily: "inherit", boxSizing: "border-box", outline: "none" };
+  const isEmpty = !loading && recent.length === 0;
+
+  if (loading) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "70vh", color: C.muted, fontSize: 15 }}>
+        Загрузка...
+      </div>
+    );
+  }
+
+  if (isEmpty) {
+    return <Onboarding onAdd={() => setShowAdd(true)} />;
+  }
 
   return (
     <div style={{ padding: "32px 36px", color: C.text }}>
-      {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
         <div>
           <div style={{ fontSize: 13, color: C.muted, marginBottom: 4 }}>
@@ -77,7 +120,6 @@ export default function Overview({ onNavigate }) {
         </button>
       </div>
 
-      {/* Add form */}
       {showAdd && (
         <Card style={{ marginBottom: 24, padding: 20 }}>
           <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 16 }}>Новая транзакция</div>
@@ -108,7 +150,6 @@ export default function Overview({ onNavigate }) {
         </Card>
       )}
 
-      {/* KPI cards */}
       {kpi && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16, marginBottom: 24 }}>
           <KPICard label="Доходы (этот месяц)"  value={kpi.this_month.income}  prev={kpi.prev_month.income} />
@@ -118,7 +159,6 @@ export default function Overview({ onNavigate }) {
       )}
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 20 }}>
-        {/* Chart */}
         <Card>
           <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>Доходы и расходы</div>
           <div style={{ fontSize: 12, color: C.muted, marginBottom: 16 }}>Последние 6 месяцев (млн UZS)</div>
@@ -148,13 +188,17 @@ export default function Overview({ onNavigate }) {
           </ResponsiveContainer>
         </Card>
 
-        {/* Recent */}
         <Card style={{ padding: 20 }}>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
             <div style={{ fontWeight:700, fontSize:15 }}>Последние записи</div>
             <button onClick={() => onNavigate("transactions")} style={{ fontSize:12, color: C.gold, background:"none", border:"none", cursor:"pointer", fontWeight:600 }}>Все →</button>
           </div>
-          {recent.map(t => (
+          {recent.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "20px 0", color: C.muted, fontSize: 13 }}>
+              <div style={{ fontSize: 32, marginBottom: 8 }}>📭</div>
+              Транзакций пока нет
+            </div>
+          ) : recent.map(t => (
             <div key={t.id} style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14 }}>
               <div style={{ width:36, height:36, borderRadius:10, background:"#F6F4EF", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16, flexShrink:0 }}>
                 {t.type === "income" ? "💰" : "💸"}

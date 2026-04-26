@@ -29,7 +29,6 @@ export default function Transactions() {
     setTxns(data);
   };
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { load(); }, [typeF, catF]);
 
   const allCats = [...CATEGORIES.income, ...CATEGORIES.expense];
@@ -133,8 +132,14 @@ export default function Transactions() {
             </tr>
           </thead>
           <tbody>
-            {filtered.length === 0 ? (
-              <tr><td colSpan={6} style={{ padding:40, textAlign:"center", color: C.muted }}>Транзакций нет</td></tr>
+            {filtered.length === 0 && txns.length === 0 ? (
+              <tr><td colSpan={6} style={{ padding: 60, textAlign: 'center' }}>
+                <div style={{ fontSize: 40, marginBottom: 12 }}>📭</div>
+                <div style={{ fontWeight: 700, fontSize: 16, color: '#1C1917', marginBottom: 8 }}>Транзакций пока нет</div>
+                <div style={{ color: '#6B7280', fontSize: 13 }}>Добавьте первую через кнопку выше или напишите боту @botdata365_bot</div>
+              </td></tr>
+            ) : filtered.length === 0 ? (
+              <tr><td colSpan={6} style={{ padding: 40, textAlign: 'center', color: '#6B7280', fontSize: 15 }}>Ничего не найдено по фильтрам</td></tr>
             ) : filtered.map((t, i) => (
               <tr key={t.id} style={{ borderBottom:`1px solid ${C.border}`, background: i%2===0 ? "#fff" : "#FAFAF8" }}>
                 <td style={{ padding:"12px 16px", fontSize:13, color: C.muted, whiteSpace:"nowrap" }}>{fmtDate(t.date)}</td>
