@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 
 router = APIRouter(prefix="/summary", tags=["summary"])
 
-DB_PATH = "../bot/balans.db"
+DB_PATH = "/data/bot/balans.db"
 
 
 @router.get("/month")

@@ -7,7 +7,7 @@ from typing import Optional
 
 router = APIRouter(prefix="/transactions", tags=["transactions"])
 
-DB_PATH = "../bot/balans.db"
+DB_PATH = "/data/bot/balans.db"
 
 
 class TransactionIn(BaseModel):
