@@ -27,6 +27,7 @@ const DEFAULT_CATS = {
   ],
 };
 
+// eslint-disable-next-line no-unused-vars
 function Card({ children, style = {} }) {
   return (
     <div style={{ background: "#fff", borderRadius: 16, padding: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.07)", ...style }}>
