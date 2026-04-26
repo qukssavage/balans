@@ -2,11 +2,13 @@ import { useState } from "react";
 import Overview     from "./pages/Overview";
 import Transactions from "./pages/Transactions";
 import Analytics    from "./pages/Analytics";
+import Categories   from "./pages/Categories";
 
 const NAV = [
   { id: "overview",     label: "Обзор",        icon: "⬡" },
   { id: "transactions", label: "Транзакции",    icon: "≡" },
   { id: "analytics",   label: "Аналитика",     icon: "◎" },
+  { id: "categories",  label: "Категории",     icon: "⊞" },
 ];
 
 const C = {
@@ -24,15 +26,11 @@ export default function App() {
 
   return (
     <div style={{ display: "flex", height: "100vh", background: C.cream, fontFamily: "'Inter','Segoe UI',system-ui,sans-serif" }}>
-      {/* Sidebar */}
       <div style={{ width: 220, background: C.navy, display: "flex", flexDirection: "column", flexShrink: 0 }}>
-        {/* Logo */}
         <div style={{ padding: "26px 22px 18px", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
           <div style={{ fontSize: 26, fontWeight: 800, color: C.gold, letterSpacing: "-0.5px" }}>Balans</div>
           <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", marginTop: 2, fontWeight: 600, letterSpacing: 1.5 }}>FINANCE DASHBOARD</div>
         </div>
-
-        {/* Nav */}
         <nav style={{ flex: 1, padding: "14px 10px" }}>
           {NAV.map(item => {
             const active = page === item.id;
@@ -49,8 +47,6 @@ export default function App() {
             );
           })}
         </nav>
-
-        {/* Bot status */}
         <div style={{ padding: "14px 20px", borderTop: "1px solid rgba(255,255,255,0.07)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#22C55E" }} />
@@ -61,12 +57,11 @@ export default function App() {
           </div>
         </div>
       </div>
-
-      {/* Main content */}
       <main style={{ flex: 1, overflow: "auto" }}>
         {page === "overview"     && <Overview     onNavigate={setPage} />}
         {page === "transactions" && <Transactions />}
         {page === "analytics"    && <Analytics    />}
+        {page === "categories"   && <Categories   />}
       </main>
     </div>
   );
