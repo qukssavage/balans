@@ -9,7 +9,7 @@ API_URL = "https://balans-production.up.railway.app"
 
 async def init_db():
     async with aiosqlite.connect(DB_PATH) as db:
-        await db.execute("""
+        await db.executescript("""
             CREATE TABLE IF NOT EXISTS transactions (
                 id          TEXT PRIMARY KEY,
                 user_id     INTEGER NOT NULL,
@@ -20,15 +20,19 @@ async def init_db():
                 date        TEXT NOT NULL,
                 note        TEXT DEFAULT '',
                 created_at  TEXT NOT NULL
-            )
-        """)
-        await db.execute("""
+            );
             CREATE TABLE IF NOT EXISTS users (
                 user_id     INTEGER PRIMARY KEY,
                 username    TEXT,
                 lang        TEXT DEFAULT 'ru',
                 created_at  TEXT NOT NULL
-            )
+            );
+            CREATE TABLE IF NOT EXISTS budgets (
+                id          TEXT PRIMARY KEY,
+                category    TEXT NOT NULL UNIQUE,
+                monthly_limit REAL NOT NULL,
+                created_at  TEXT NOT NULL
+            );
         """)
         await db.commit()
     print("✅ База данных готова")
@@ -57,7 +61,6 @@ async def get_user_lang(user_id: int) -> str:
 async def save_transaction(user_id, username, amount, type_, category, date, note=""):
     txn_id = str(uuid.uuid4())
 
-    # 1. Сохраняем локально
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute(
             """INSERT INTO transactions
@@ -68,26 +71,19 @@ async def save_transaction(user_id, username, amount, type_, category, date, not
         )
         await db.commit()
 
-    # 2. Синхронизируем с Railway API
     try:
         async with aiohttp.ClientSession() as session:
             await session.post(
                 f"{API_URL}/transactions",
-                json={
-                    "id":       txn_id,
-                    "amount":   amount,
-                    "type":     type_,
-                    "category": category,
-                    "date":     date,
-                    "note":     note or "",
-                    "username": username,
-                },
+                json={"id": txn_id, "amount": amount, "type": type_,
+                      "category": category, "date": date, "note": note or "", "username": username},
                 timeout=aiohttp.ClientTimeout(total=5),
             )
     except Exception as e:
         print(f"⚠️ API sync failed: {e}")
 
     return txn_id
+
 
 async def delete_last_transaction(user_id):
     async with aiosqlite.connect(DB_PATH) as db:
@@ -103,7 +99,6 @@ async def delete_last_transaction(user_id):
         await db.execute("DELETE FROM transactions WHERE id=?", (txn["id"],))
         await db.commit()
 
-    # Удаляем и из API
     try:
         async with aiohttp.ClientSession() as session:
             await session.delete(
@@ -114,6 +109,8 @@ async def delete_last_transaction(user_id):
         print(f"⚠️ API delete failed: {e}")
 
     return txn
+
+
 async def get_summary(period="month"):
     if period == "today":
         since = datetime.now().date().isoformat()
@@ -125,10 +122,8 @@ async def get_summary(period="month"):
     async with aiosqlite.connect(DB_PATH) as db:
         cursor = await db.execute(
             """SELECT type, category, SUM(amount) as total, COUNT(*) as cnt
-               FROM transactions
-               WHERE date>=?
-               GROUP BY type, category
-               ORDER BY total DESC""",
+               FROM transactions WHERE date>=?
+               GROUP BY type, category ORDER BY total DESC""",
             (since,),
         )
         rows = await cursor.fetchall()
@@ -143,8 +138,64 @@ async def get_recent(limit=5):
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
         cursor = await db.execute(
-            "SELECT * FROM transactions ORDER BY created_at DESC LIMIT ?",
-            (limit,),
+            "SELECT * FROM transactions ORDER BY created_at DESC LIMIT ?", (limit,)
         )
         rows = await cursor.fetchall()
     return [dict(r) for r in rows]
+
+
+# ── Бюджеты ───────────────────────────────────────────────
+async def set_budget(category: str, monthly_limit: float):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            """INSERT INTO budgets (id, category, monthly_limit, created_at)
+               VALUES (?, ?, ?, ?)
+               ON CONFLICT(category) DO UPDATE SET monthly_limit=excluded.monthly_limit""",
+            (str(uuid.uuid4()), category, monthly_limit, datetime.now().isoformat()),
+        )
+        await db.commit()
+
+
+async def get_budgets() -> list:
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute("SELECT * FROM budgets")
+        rows = await cursor.fetchall()
+    return [dict(r) for r in rows]
+
+
+async def check_budget_alerts(category: str, lang: str = "ru") -> str | None:
+    """Проверяет бюджет категории и возвращает предупреждение если нужно"""
+    since = datetime.now().replace(day=1).date().isoformat()
+
+    async with aiosqlite.connect(DB_PATH) as db:
+        # Получаем лимит
+        cursor = await db.execute(
+            "SELECT monthly_limit FROM budgets WHERE category=?", (category,)
+        )
+        row = await cursor.fetchone()
+        if not row:
+            return None
+        limit = row[0]
+
+        # Считаем потраченное
+        cursor = await db.execute(
+            """SELECT SUM(amount) FROM transactions
+               WHERE type='expense' AND category=? AND date>=?""",
+            (category, since),
+        )
+        row = await cursor.fetchone()
+        spent = row[0] or 0
+
+    pct = spent / limit * 100 if limit > 0 else 0
+
+    if pct >= 100:
+        if lang == "uz":
+            return f"❌ *{category}* bo'yicha limit oshib ketdi!\nSarflandi: {spent/1e6:.1f}M — {(spent-limit)/1e6:.1f}M so'm ortiqcha"
+        return f"❌ Превышен лимит! *{category}*\nПотрачено: {spent/1e6:.1f}M — превышение на {(spent-limit)/1e6:.1f}M сум"
+    elif pct >= 80:
+        if lang == "uz":
+            return f"⚠️ Diqqat! *{category}* — {pct:.0f}% ishlatildi\n{spent/1e6:.1f}M / {limit/1e6:.1f}M so'm"
+        return f"⚠️ Внимание! *{category}* использована на {pct:.0f}%\nПотрачено: {spent/1e6:.1f}M из {limit/1e6:.1f}M сум"
+
+    return None

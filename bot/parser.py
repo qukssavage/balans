@@ -11,6 +11,13 @@ def parse(text: str) -> dict:
 
     if is_undo(text_lower):
         return {"intent": "undo"}
+    # Проверяем бюджетную команду
+    if is_budget(text_lower):
+        amount = extract_amount(text_lower)
+        category = detect_category(text_lower, 'expense')
+        return {'intent': 'budget', 'amount': amount, 'category': category}
+
+
 
     if is_query(text_lower):
         return {"intent": "query", "period": detect_period(text_lower)}
@@ -45,7 +52,7 @@ def extract_amount(text: str) -> float | None:
         (r"(\d+[\.,]?\d*)\s*тыс",   1_000),
         (r"(\d+[\.,]?\d*)\s*ming",  1_000),
         (r"(\d+[\.,]?\d*)\s*[кk]",  1_000),
-        (r"(\d[\d\s_]*\d|\d{5,})",  1),
+        (r"(\d[\d\s_]*\d|\d{5,})",  1),  # просто число от 5 цифр
     ]
     for pattern, multiplier in patterns:
         match = re.search(pattern, text)
@@ -92,6 +99,8 @@ def detect_date(text: str) -> str:
     if "позавчера" in text:
         return (today - timedelta(days=2)).isoformat()
 
+    # Ищем только явные даты вида 25.04 или 25.04.2026
+    # Исключаем числа с суффиксами млн/тыс/м/к — это суммы
     clean = re.sub(r"\d+[\.,]\d*\s*(млн|тыс|миллион|[мкmk])\b", "", text)
     match = re.search(r"\b(\d{1,2})[./\-](\d{1,2})(?:[./\-](\d{2,4}))?\b", clean)
     if match:
@@ -125,6 +134,7 @@ def detect_period(text: str) -> str:
         return "week"
     return "month"
 
+
 def is_undo(text: str) -> bool:
     keywords = [
         "отмени", "отменить", "удали", "удалить",
@@ -135,3 +145,8 @@ def is_undo(text: str) -> bool:
 
 def extract_note(text: str) -> str:
     return text.strip()[:100]
+
+
+def is_budget(text: str) -> bool:
+    keywords = ["лимит", "бюджет", "limit", "byudjet", "установи лимит", "set limit"]
+    return any(kw in text for kw in keywords)

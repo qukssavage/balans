@@ -27,6 +27,7 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = await get_user_lang(user.id)
 
     if not lang:
+        # Первый раз — спрашиваем язык
         await update.message.reply_text(
             "👋 Tilni tanlang / Выберите язык:",
             reply_markup=lang_keyboard(),
@@ -77,3 +78,46 @@ async def cmd_language(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "🌐 Tilni tanlang / Выберите язык:",
         reply_markup=lang_keyboard(),
     )
+
+async def cmd_budget(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Показать текущие бюджеты или установить новый"""
+    from database import get_budgets, get_summary
+    user = update.effective_user
+    lang = await get_user_lang(user.id) or "ru"
+
+    budgets = await get_budgets()
+    data    = await get_summary(period="month")
+
+    if not budgets:
+        if lang == "uz":
+            text = (
+                "🎯 *Byudjet limitlari*\n\n"
+                "Hali hech qanday limit o'rnatilmagan.\n\n"
+                "Limit o'rnatish uchun yozing:\n"
+                "_«Ijara limiti 10 mln»_\n"
+                "_«Maosh limiti 20 mln»_"
+            )
+        else:
+            text = (
+                "🎯 *Бюджетные лимиты*\n\n"
+                "Лимиты ещё не установлены.\n\n"
+                "Чтобы установить лимит, напишите:\n"
+                "_«Лимит аренда 10 млн»_\n"
+                "_«Лимит зарплата 20 млн»_"
+            )
+        await update.message.reply_text(text, parse_mode="Markdown")
+        return
+
+    lines = ["🎯 *Бюджетные лимиты*\n" if lang == "ru" else "🎯 *Byudjet limitlari*\n"]
+    for b in budgets:
+        spent = data["expense"].get(b["category"], {}).get("total", 0)
+        pct   = spent / b["monthly_limit"] * 100 if b["monthly_limit"] > 0 else 0
+        bar   = "🟩" * int(pct // 20) + "⬜" * (5 - int(pct // 20))
+        status = "❌" if pct >= 100 else "⚠️" if pct >= 80 else "✅"
+        lines.append(
+            f"{status} *{b['category']}*\n"
+            f"{bar} {pct:.0f}%\n"
+            f"{spent/1e6:.1f}M / {b['monthly_limit']/1e6:.1f}M сум\n"
+        )
+
+    await update.message.reply_text("\n".join(lines), parse_mode="Markdown")

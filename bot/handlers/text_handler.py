@@ -69,6 +69,20 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             await update.message.reply_text(t(lang, "nothing_to_undo"))
 
+    elif intent == "budget":
+        from database import set_budget
+        if result.get("amount") and result.get("category") not in ("Прочие расходы", "Прочие доходы"):
+            await set_budget(result["category"], result["amount"])
+            cat = result["category"]
+            amt = result["amount"]
+            if lang == "uz":
+                msg = f"🎯 *{cat}* uchun limit o'rnatildi: {amt/1e6:.1f}M so'm/oy"
+            else:
+                msg = f"🎯 Лимит установлен для *{cat}*: {amt/1e6:.1f}M сум/месяц"
+            await update.message.reply_text(msg, parse_mode="Markdown")
+        else:
+            await update.message.reply_text("Укажите категорию и сумму. Например: _Лимит аренда 10 млн_", parse_mode="Markdown")
+
     else:
         reason = result.get("reason", "")
         if reason == "no_type" and "amount" in result:
@@ -88,6 +102,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     data  = query.data
     user  = update.effective_user
     lang  = await get_user_lang(user.id) or "ru"
+
     # Выбор языка
     if data.startswith("lang:"):
         chosen_lang = data.split(":")[1]
@@ -152,3 +167,9 @@ async def _save_and_confirm(update, context, result, lang):
         parse_mode="Markdown",
         reply_markup=get_keyboard(lang),
     )
+    # Проверяем бюджет если это расход
+    if result["type"] == "expense":
+        from database import check_budget_alerts
+        alert = await check_budget_alerts(result["category"], lang)
+        if alert:
+            await update.message.reply_text(alert, parse_mode="Markdown")
