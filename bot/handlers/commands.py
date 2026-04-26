@@ -71,3 +71,9 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="Markdown",
         reply_markup=get_keyboard(lang),
     )
+
+async def cmd_language(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "🌐 Tilni tanlang / Выберите язык:",
+        reply_markup=lang_keyboard(),
+    )
