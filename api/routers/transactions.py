@@ -7,7 +7,7 @@ from typing import Optional
 
 router = APIRouter(prefix="/transactions", tags=["transactions"])
 
-DB_PATH = "/data/bot/balans.db"
+DB_PATH = "/data/balans.db"
 
 
 class TransactionIn(BaseModel):
@@ -20,11 +20,11 @@ class TransactionIn(BaseModel):
 
 @router.get("")
 async def get_transactions(
-    type:     Optional[str] = Query(None),
-    category: Optional[str] = Query(None),
-    from_date:Optional[str] = Query(None),
-    to_date:  Optional[str] = Query(None),
-    limit:    int = Query(100),
+    type:      Optional[str] = Query(None),
+    category:  Optional[str] = Query(None),
+    from_date: Optional[str] = Query(None),
+    to_date:   Optional[str] = Query(None),
+    limit:     int = Query(100),
 ):
     query  = "SELECT * FROM transactions WHERE 1=1"
     params = []
@@ -45,12 +45,14 @@ async def get_transactions(
     query += " ORDER BY date DESC, created_at DESC LIMIT ?"
     params.append(limit)
 
-    async with aiosqlite.connect(DB_PATH) as db:
-        db.row_factory = aiosqlite.Row
-        cursor = await db.execute(query, params)
-        rows   = await cursor.fetchall()
-
-    return [dict(r) for r in rows]
+    try:
+        async with aiosqlite.connect(DB_PATH) as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute(query, params)
+            rows   = await cursor.fetchall()
+        return [dict(r) for r in rows]
+    except Exception as e:
+        return []
 
 
 @router.post("")
